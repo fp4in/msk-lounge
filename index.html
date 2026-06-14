@@ -1429,25 +1429,33 @@ window.addEventListener('scroll',()=>topBtn.classList.toggle('show',window.scrol
     с телефона — это нормально, заработает после публикации сайта.)
    ========================================================= */
 const SITE_URL = "";
-window.addEventListener('load',()=>{
-  const box=document.getElementById('qr');
-  const isFile=location.protocol==='file:';
+function makeQR(){
+  const box=document.getElementById('qr'); if(!box) return;
   const target=SITE_URL || location.href;
-  try{
-    if(typeof QRCode==='undefined') throw new Error('lib');
-    new QRCode(box,{text:target,width:168,height:168,colorDark:"#0a0a0c",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
-  }catch(e){
-    // запасной рендер QR через сервис-картинку
-    box.innerHTML='<img width="168" height="168" alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=168x168&margin=0&data='+encodeURIComponent(target)+'">';
-  }
-  // предупредить, если открыт локально и адрес сайта ещё не задан
-  if(isFile && !SITE_URL){
-    const cap=document.querySelector('.qr-card .c');
-    if(cap){cap.removeAttribute('data-i18n');
-      cap.innerHTML='⚠️ Файл открыт локально — QR ведёт на путь к файлу и не сработает с телефона. Залейте сайт на хостинг или впишите адрес в <b>SITE_URL</b> — и QR заработает.';}
-  }
-  setTimeout(()=>document.getElementById('loader').classList.add('hide'),500);
-});
+  const size=180;
+  box.innerHTML="";
+  // основной рендер — картинкой через QR-сервис (надёжно, без JS-библиотеки), кликабельно
+  const a=document.createElement('a'); a.href=target; a.target='_blank'; a.rel='noopener';
+  const img=document.createElement('img'); img.width=size; img.height=size; img.alt='QR — меню MSK Lounge'; img.decoding='async';
+  img.src='https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&margin=0&data='+encodeURIComponent(target);
+  // если первый сервис недоступен — пробуем библиотеку, затем второй сервис
+  let stage=0;
+  img.onerror=function(){
+    if(stage===0){ stage=1;
+      try{ if(typeof QRCode!=='undefined'){ box.innerHTML=''; new QRCode(box,{text:target,width:size,height:size,colorDark:'#0a0a0c',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M}); return; } }catch(e){}
+      img.src='https://quickchart.io/qr?margin=1&size='+size+'&text='+encodeURIComponent(target);
+    }
+  };
+  a.appendChild(img); box.appendChild(a);
+  // показать ссылку текстом под QR (на случай, если камера не сработает — можно вбить вручную)
+  const cap=document.querySelector('.qr-card .c');
+  if(cap && location.protocol!=='file:'){ const sh=document.getElementById('qrUrl'); if(!sh){
+    const u=document.createElement('div'); u.id='qrUrl'; u.style.cssText='margin-top:6px;font-size:.74rem;color:var(--gold-l);word-break:break-all';
+    u.textContent=target; cap.insertAdjacentElement('afterend',u);
+  }}
+}
+makeQR();
+window.addEventListener('load',()=>{ setTimeout(()=>{const l=document.getElementById('loader'); if(l)l.classList.add('hide');},500); });
 
 /* =========================================================
    РЕАЛИСТИЧНЫЙ ДЫМ ОТ КАЛЬЯНОВ
